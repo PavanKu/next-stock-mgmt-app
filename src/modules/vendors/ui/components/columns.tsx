@@ -1,7 +1,7 @@
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
-import { BuildingIcon, CornerDownRightIcon, MailIcon, PhoneIcon } from "lucide-react";
+import { BuildingIcon, MailIcon, PhoneIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { VendorGetMany } from "../../types";

@@ -27,7 +27,7 @@ export const columns: ColumnDef<AgentGetMany[number]>[] = [
   {
     accessorKey: "meetingsCount",
     header: "Meetings",
-		cell: ({row}) => (
+		cell: () => (
 			<Badge variant="outline" className="flex items-center gap-x-2 [&>svg]:size-4">
 				<VideoIcon className="text-blue-500"/>
 				<span >{"5 meetings"}</span>

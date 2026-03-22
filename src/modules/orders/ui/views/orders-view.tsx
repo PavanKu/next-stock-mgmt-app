@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/empty-state";
 import { ErrorState } from "@/components/error-state";
 import { LoadingState } from "@/components/loading-state";
 import { useTRPC } from "@/trpc/client";
-import { OrderGetOne } from "../../types";
+import { OrderGetMany } from "../../types";
 import { columns } from "../components/columns";
 import { useOrdersFilters } from "../hooks/use-orders-filters";
 
@@ -28,7 +28,7 @@ export function OrdersView() {
     setFilters({ page });
   };
 
-  const handleRowClick = (row: OrderGetOne) => {
+  const handleRowClick = (row: OrderGetMany[number]) => {
     router.push(`/orders/${row.orderNumber}`);
   };
 

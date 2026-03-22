@@ -1,5 +1,5 @@
 "use client";
-import { BotIcon, BuildingIcon, PackageIcon, ShoppingCartIcon, StarIcon, VideoIcon } from "lucide-react";
+import { BuildingIcon, PackageIcon, ShoppingCartIcon, StarIcon } from "lucide-react";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -20,7 +20,7 @@ import {
 import { DashboardUserButton } from "./dashboard-user-button";
 
 const firstSection = [
-  {
+  /* {
     icon: VideoIcon,
     label: "Meetings",
     href: "/meetings",
@@ -29,7 +29,7 @@ const firstSection = [
     icon: BotIcon,
     label: "Agents",
     href: "/agents",
-  },
+  }, */
   {
     icon: ShoppingCartIcon,
     label: "Orders",

@@ -9,7 +9,7 @@ interface Props {
     params: Promise<{agentId: string}>
 }
 
-export default async function({params}: Props) {
+export default async function AgentDetailPage({params}: Props) {
     const {agentId} = await params;
 
     const queryClient = getQueryClient();

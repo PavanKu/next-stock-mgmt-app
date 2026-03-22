@@ -13,7 +13,7 @@ interface Props {
   params: Promise<{ meetingId: string }>;
 }
 
-export default async function ({ params }: Props) {
+export default async function MeetingDetailPage({ params }: Props) {
   const { meetingId } = await params;
 
   const queryClient = getQueryClient();

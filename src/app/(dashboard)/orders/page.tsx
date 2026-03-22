@@ -11,12 +11,12 @@ import { ErrorBoundary } from "react-error-boundary";
 export default function OrdersPage() {
   return (
     <div className="flex flex-col h-full">
-      <OrdersListHeader />
-      <ErrorBoundary FallbackComponent={OrderViewError}>
-        <Suspense fallback={<OrderViewLoading />}>
+      <Suspense fallback={<OrderViewLoading />}>
+        <OrdersListHeader />
+        <ErrorBoundary FallbackComponent={OrderViewError}>
           <OrdersView />
-        </Suspense>
-      </ErrorBoundary>
+        </ErrorBoundary>
+      </Suspense>
     </div>
   );
 }

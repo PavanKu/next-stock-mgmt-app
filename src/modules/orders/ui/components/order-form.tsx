@@ -32,6 +32,24 @@ import { useState } from "react";
 import { orderInsertSchema } from "../../schemas";
 import { OrderGetOne } from "../../types";
 
+type OrderItem = {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  productId: string;
+  quantity: number;
+  unitPrice: string | null;
+  createdBy: string;
+  updatedBy: string;
+  orderId: string;
+  totalPrice: string | null;
+  product: {
+    id: string;
+    name: string;
+    sku: string;
+  };
+};
+
 interface Props {
   onSuccess?: (orderNumber: string) => void;
   onCancel?: () => void;
@@ -92,7 +110,7 @@ export function OrderForm({ onSuccess, onCancel, initialValues }: Props) {
     defaultValues: {
       type: initialValues?.type ?? "purchase",
       vendorId: initialValues?.vendorId ?? "",
-      items: initialValues?.items?.map((item: any) => ({
+      items: initialValues?.items?.map((item: OrderItem) => ({
         productId: item.productId,
         quantity: item.quantity,
         unitPrice: parseFloat(item.unitPrice || "0"),

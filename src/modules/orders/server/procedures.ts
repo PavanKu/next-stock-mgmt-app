@@ -97,6 +97,16 @@ export const orderRouter = createTRPCRouter({
     }),
 
   /**
+   * Get single order by ID (alias for getById)
+   */
+  getOne: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input, ctx }) => {
+      const { user } = ctx.auth;
+      return getOrderById(input.id, user.id);
+    }),
+
+  /**
    * Get single order by order number
    */
   getByOrderNumber: protectedProcedure

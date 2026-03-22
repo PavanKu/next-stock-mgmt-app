@@ -9,7 +9,7 @@ interface Props {
     params: Promise<{vendorId: string}>
 }
 
-export default async function({params}: Props) {
+export default async function VendorDetailPage({params}: Props) {
     const {vendorId} = await params;
 
     const queryClient = getQueryClient();
