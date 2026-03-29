@@ -1,4 +1,4 @@
-import { and, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
+import { count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -11,7 +11,6 @@ import { db } from "@/db";
 import { orders, products, vendors } from "@/db/schema";
 import {
   orderInsertSchema,
-  orderStatusUpdateSchema,
   orderUpdateSchema,
 } from "@/modules/orders/schemas";
 import {
@@ -21,7 +20,6 @@ import {
   getOrderByOrderNumber,
   getOrders,
   updateOrder,
-  updateOrderStatus,
 } from "@/modules/orders/server/orders";
 import { createTRPCRouter, protectedProcedure } from "@/trpc/init";
 
@@ -49,9 +47,7 @@ export const orderRouter = createTRPCRouter({
           .max(MAX_PAGE_SIZE)
           .default(DEFAULT_PAGE_SIZE),
         search: z.string().nullish(),
-        status: z
-          .enum(["pending", "confirmed", "completed", "cancelled"])
-          .nullish(),
+
         type: z.enum(["purchase", "sale"]).nullish(),
         vendorId: z.string().nullish(),
         dateFrom: z.string().nullish(),
@@ -64,7 +60,6 @@ export const orderRouter = createTRPCRouter({
         page,
         pageSize,
         search,
-        status,
         type,
         vendorId,
         dateFrom,
@@ -74,15 +69,13 @@ export const orderRouter = createTRPCRouter({
       return getOrders(
         {
           search: search || undefined,
-          status: status || undefined,
           type: type || undefined,
           vendorId: vendorId || undefined,
           dateFrom: dateFrom || undefined,
           dateTo: dateTo || undefined,
           page,
           pageSize,
-        },
-        user.id
+        }
       );
     }),
 
@@ -93,7 +86,7 @@ export const orderRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
       const { user } = ctx.auth;
-      return getOrderById(input.id, user.id);
+      return getOrderById(input.id);
     }),
 
   /**
@@ -103,7 +96,7 @@ export const orderRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .query(async ({ input, ctx }) => {
       const { user } = ctx.auth;
-      return getOrderById(input.id, user.id);
+      return getOrderById(input.id);
     }),
 
   /**
@@ -113,18 +106,10 @@ export const orderRouter = createTRPCRouter({
     .input(z.object({ orderNumber: z.string() }))
     .query(async ({ input, ctx }) => {
       const { user } = ctx.auth;
-      return getOrderByOrderNumber(input.orderNumber, user.id);
+      return getOrderByOrderNumber(input.orderNumber);
     }),
 
-  /**
-   * Update order status
-   */
-  updateStatus: protectedProcedure
-    .input(orderStatusUpdateSchema)
-    .mutation(async ({ input, ctx }) => {
-      const { user } = ctx.auth;
-      return updateOrderStatus(input.id, input.status, user.id);
-    }),
+
 
   /**
    * Update order details (notes)
@@ -144,7 +129,7 @@ export const orderRouter = createTRPCRouter({
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
       const { user } = ctx.auth;
-      return deleteOrder(input.id, user.id);
+      return deleteOrder(input.id);
     }),
 
   /**
@@ -155,45 +140,16 @@ export const orderRouter = createTRPCRouter({
     
     const [totalOrders] = await db
       .select({ count: count() })
-      .from(orders)
-      .where(eq(orders.createdBy, user.id));
-
-    const [pendingOrders] = await db
-      .select({ count: count() })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.createdBy, user.id),
-          eq(orders.status, "pending")
-        )
-      );
-
-    const [completedOrders] = await db
-      .select({ count: count() })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.createdBy, user.id),
-          eq(orders.status, "completed")
-        )
-      );
+      .from(orders);
 
     const [totalValue] = await db
       .select({
         total: sql<number>`COALESCE(SUM(CAST(${orders.totalAmount} AS DECIMAL)), 0)`,
       })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.createdBy, user.id),
-          eq(orders.status, "completed")
-        )
-      );
+      .from(orders);
 
     return {
       totalOrders: totalOrders.count,
-      pendingOrders: pendingOrders.count,
-      completedOrders: completedOrders.count,
       totalValue: totalValue.total || 0,
     };
   }),
@@ -220,7 +176,6 @@ export const orderRouter = createTRPCRouter({
         })
         .from(orders)
         .innerJoin(vendors, eq(orders.vendorId, vendors.id))
-        .where(eq(orders.createdBy, user.id))
         .orderBy(desc(orders.createdAt))
         .limit(input.limit);
 
@@ -242,12 +197,7 @@ export const orderRouter = createTRPCRouter({
         quantity: products.quantity,
       })
       .from(products)
-      .where(
-        and(
-          eq(products.createdBy, user.id),
-          sql`${products.quantity} < 10`
-        )
-      )
+      .where(sql`${products.quantity} < 10`)
       .orderBy(products.quantity);
 
     return lowStockProducts;

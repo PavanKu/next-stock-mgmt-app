@@ -1,4 +1,5 @@
 import { agentRouter } from '@/modules/agents/server/procedures';
+import { dashboardRouter } from '@/modules/dashboard/server/procedures';
 import { meetingRouter } from '@/modules/meetings/server/procedure';
 import { orderRouter } from '@/modules/orders/server/procedures';
 import { productRouter } from '@/modules/products/server/procedures';
@@ -10,7 +11,8 @@ export const appRouter = createTRPCRouter({
   meeting: meetingRouter,
   order: orderRouter,
   product: productRouter,
-  vendor: vendorRouter
+  vendor: vendorRouter,
+  dashboard: dashboardRouter
 });
 // export type definition of API
 export type AppRouter = typeof appRouter;

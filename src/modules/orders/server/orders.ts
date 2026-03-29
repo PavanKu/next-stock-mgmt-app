@@ -17,7 +17,6 @@ interface CreateOrderInput {
 
 interface OrderFilters {
   search?: string;
-  status?: "pending" | "confirmed" | "completed" | "cancelled";
   type?: "purchase" | "sale";
   vendorId?: string;
   dateFrom?: string;
@@ -90,56 +89,6 @@ async function validateStockAvailability(items: CreateOrderInput['items']): Prom
 }
 
 /**
- * Update product stock quantities when order is completed
- */
-async function updateProductStock(
-  orderId: string,
-  orderType: "purchase" | "sale",
-  userId: string
-): Promise<void> {
-  const orderItemsList = await db
-    .select({
-      productId: orderItems.productId,
-      quantity: orderItems.quantity
-    })
-    .from(orderItems)
-    .where(eq(orderItems.orderId, orderId));
-
-  for (const item of orderItemsList) {
-    const [currentProduct] = await db
-      .select({ quantity: products.quantity })
-      .from(products)
-      .where(eq(products.id, item.productId));
-
-    if (!currentProduct) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: `Product with ID ${item.productId} not found`,
-      });
-    }
-
-    const quantityChange = orderType === "purchase" ? item.quantity : -item.quantity;
-    const newQuantity = currentProduct.quantity + quantityChange;
-
-    if (newQuantity < 0) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: `Cannot complete order: would result in negative stock`,
-      });
-    }
-
-    await db
-      .update(products)
-      .set({
-        quantity: newQuantity,
-        updatedBy: userId,
-        updatedAt: new Date()
-      })
-      .where(eq(products.id, item.productId));
-  }
-}
-
-/**
  * Create a new order with items
  */
 export async function createOrder(input: CreateOrderInput, userId: string) {
@@ -178,7 +127,6 @@ export async function createOrder(input: CreateOrderInput, userId: string) {
       orderNumber,
       type: input.type,
       vendorId: input.vendorId,
-      status: "pending",
       totalAmount: totalAmount.toString(),
       notes: input.notes,
       createdBy: userId,
@@ -206,10 +154,9 @@ export async function createOrder(input: CreateOrderInput, userId: string) {
 /**
  * Get orders with filtering and pagination
  */
-export async function getOrders(filters: OrderFilters, userId: string) {
+export async function getOrders(filters: OrderFilters) {
   const {
     search,
-    status,
     type,
     vendorId,
     dateFrom,
@@ -219,9 +166,7 @@ export async function getOrders(filters: OrderFilters, userId: string) {
   } = filters;
 
   const whereConditions = [
-    eq(orders.createdBy, userId),
     search ? ilike(orders.orderNumber, `%${search}%`) : undefined,
-    status ? eq(orders.status, status) : undefined,
     type ? eq(orders.type, type) : undefined,
     vendorId ? eq(orders.vendorId, vendorId) : undefined,
     dateFrom ? gte(orders.orderDate, new Date(dateFrom)) : undefined,
@@ -238,7 +183,7 @@ export async function getOrders(filters: OrderFilters, userId: string) {
     })
     .from(orders)
     .innerJoin(vendors, eq(orders.vendorId, vendors.id))
-    .where(and(...whereConditions))
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined)
     .orderBy(desc(orders.createdAt), desc(orders.id))
     .limit(pageSize)
     .offset((page - 1) * pageSize);
@@ -247,7 +192,7 @@ export async function getOrders(filters: OrderFilters, userId: string) {
     .select({ count: count() })
     .from(orders)
     .innerJoin(vendors, eq(orders.vendorId, vendors.id))
-    .where(and(...whereConditions));
+    .where(whereConditions.length > 0 ? and(...whereConditions) : undefined);
 
   const totalPages = Math.ceil(total.count / pageSize);
 
@@ -261,7 +206,7 @@ export async function getOrders(filters: OrderFilters, userId: string) {
 /**
  * Get single order by ID with items
  */
-export async function getOrderById(id: string, userId: string) {
+export async function getOrderById(id: string) {
   const [order] = await db
     .select({
       ...getTableColumns(orders),
@@ -274,7 +219,7 @@ export async function getOrderById(id: string, userId: string) {
     })
     .from(orders)
     .innerJoin(vendors, eq(orders.vendorId, vendors.id))
-    .where(and(eq(orders.id, id), eq(orders.createdBy, userId)));
+    .where(eq(orders.id, id));
 
   if (!order) {
     throw new TRPCError({
@@ -306,16 +251,11 @@ export async function getOrderById(id: string, userId: string) {
 /**
  * Get order by order number
  */
-export async function getOrderByOrderNumber(orderNumber: string, userId: string) {
+export async function getOrderByOrderNumber(orderNumber: string) {
   const [order] = await db
     .select({ id: orders.id })
     .from(orders)
-    .where(
-      and(
-        eq(orders.orderNumber, orderNumber),
-        eq(orders.createdBy, userId)
-      )
-    );
+    .where(eq(orders.orderNumber, orderNumber));
 
   if (!order) {
     throw new TRPCError({
@@ -324,61 +264,7 @@ export async function getOrderByOrderNumber(orderNumber: string, userId: string)
     });
   }
 
-  return getOrderById(order.id, userId);
-}
-
-/**
- * Update order status
- */
-export async function updateOrderStatus(
-  id: string,
-  status: "pending" | "confirmed" | "completed" | "cancelled",
-  userId: string
-) {
-  const [existingOrder] = await db
-    .select({
-      id: orders.id,
-      status: orders.status,
-      type: orders.type,
-    })
-    .from(orders)
-    .where(and(eq(orders.id, id), eq(orders.createdBy, userId)));
-
-  if (!existingOrder) {
-    throw new TRPCError({
-      code: "NOT_FOUND",
-      message: `Order with ID ${id} not found`,
-    });
-  }
-
-  // Handle stock updates when order is completed
-  if (status === "completed" && existingOrder.status !== "completed") {
-    await updateProductStock(id, existingOrder.type, userId);
-  }
-
-  const updateData: {
-    status: "pending" | "confirmed" | "completed" | "cancelled";
-    updatedBy: string;
-    updatedAt: Date;
-    completedAt?: Date;
-  } = {
-    status,
-    updatedBy: userId,
-    updatedAt: new Date(),
-  };
-
-  // Set completion timestamp
-  if (status === "completed") {
-    updateData.completedAt = new Date();
-  }
-
-  const [updatedOrder] = await db
-    .update(orders)
-    .set(updateData)
-    .where(eq(orders.id, id))
-    .returning();
-
-  return updatedOrder;
+  return getOrderById(order.id);
 }
 
 /**
@@ -410,25 +296,18 @@ export async function updateOrder(
 }
 
 /**
- * Delete order (only if pending status)
+ * Delete order
  */
-export async function deleteOrder(id: string, userId: string) {
+export async function deleteOrder(id: string) {
   const [existingOrder] = await db
-    .select({ status: orders.status })
+    .select({ id: orders.id })
     .from(orders)
-    .where(and(eq(orders.id, id), eq(orders.createdBy, userId)));
+    .where(eq(orders.id, id));
 
   if (!existingOrder) {
     throw new TRPCError({
       code: "NOT_FOUND",
       message: `Order with ID ${id} not found`,
-    });
-  }
-
-  if (existingOrder.status !== "pending") {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Only pending orders can be deleted",
     });
   }
 

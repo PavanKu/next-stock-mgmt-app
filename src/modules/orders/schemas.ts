@@ -21,18 +21,11 @@ export const orderUpdateSchema = z.object({
   notes: z.string().optional(),
 });
 
-// Order status update schema
-export const orderStatusUpdateSchema = z.object({
-  id: z.string().min(1, { message: "Order ID is required" }),
-  status: z.enum(["pending", "confirmed", "completed", "cancelled"], {
-    message: "Valid status is required",
-  }),
-});
+
 
 // Order filters schema
 export const orderFiltersSchema = z.object({
   search: z.string().optional(),
-  status: z.enum(["pending", "confirmed", "completed", "cancelled"]).optional(),
   type: z.enum(["purchase", "sale"]).optional(),
   vendorId: z.string().optional(),
   dateFrom: z.string().optional(),

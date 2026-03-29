@@ -3,10 +3,6 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import {
-  CircleCheckIcon,
-  CircleXIcon,
-  ClockIcon,
-  PackageIcon,
   ShoppingCartIcon,
   TruckIcon,
 } from "lucide-react";
@@ -15,7 +11,6 @@ import { toast } from "sonner";
 import { ErrorState } from "@/components/error-state";
 import { LoadingState } from "@/components/loading-state";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -31,27 +26,13 @@ import { cn } from "@/lib/utils";
 import { useTRPC } from "@/trpc/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { OrderStatus } from "../../types";
+
 import { OrderDetailHeader } from "../components/order-detail-header";
 import { UpdateOrderDialog } from "../components/update-order-dialog";
 
 interface Props {
   orderNumber: string;
 }
-
-const statusIconMap = {
-  pending: ClockIcon,
-  confirmed: PackageIcon,
-  completed: CircleCheckIcon,
-  cancelled: CircleXIcon,
-};
-
-const statusColorMap = {
-  pending: "bg-yellow-500/20 text-yellow-800 border-yellow-800/5",
-  confirmed: "bg-blue-500/20 text-blue-800 border-blue-800/5",
-  completed: "bg-emerald-500/20 text-emerald-800 border-emerald-800/5",
-  cancelled: "bg-gray-500/20 text-gray-800 border-gray-800/5",
-};
 
 const typeIconMap = {
   purchase: TruckIcon,
@@ -77,22 +58,7 @@ export function OrderDetailView({ orderNumber }: Props) {
     trpc.order.getByOrderNumber.queryOptions({ orderNumber })
   );
 
-  const updateStatus = useMutation(
-    trpc.order.updateStatus.mutationOptions({
-      onSuccess: async () => {
-        await queryClient.invalidateQueries(
-          trpc.order.getByOrderNumber.queryOptions({ orderNumber })
-        );
-        await queryClient.invalidateQueries(
-          trpc.order.getMany.queryOptions({})
-        );
-        toast.success("Order status updated successfully");
-      },
-      onError: (error) => {
-        toast.error(error.message);
-      },
-    })
-  );
+
 
   const removeOrder = useMutation(
     trpc.order.delete.mutationOptions({
@@ -120,26 +86,6 @@ export function OrderDetailView({ orderNumber }: Props) {
     removeOrder.mutate({ id: order.id });
   };
 
-  const handleStatusUpdate = (newStatus: OrderStatus) => {
-    updateStatus.mutate({
-      id: order.id,
-      status: newStatus,
-    });
-  };
-
-  const canUpdateStatus = (currentStatus: string | null, newStatus: OrderStatus) => {
-    if (!currentStatus) return false;
-    // Define allowed status transitions
-    const transitions: Record<string, OrderStatus[]> = {
-      pending: [OrderStatus.Confirmed, OrderStatus.Cancelled],
-      confirmed: [OrderStatus.Completed, OrderStatus.Cancelled],
-      completed: [], // No transitions from completed
-      cancelled: [], // No transitions from cancelled
-    };
-    return transitions[currentStatus]?.includes(newStatus) || false;
-  };
-
-  const StatusIcon = statusIconMap[order.status as keyof typeof statusIconMap];
   const TypeIcon = typeIconMap[order.type as keyof typeof typeIconMap];
 
   const totalAmount = parseFloat(order.totalAmount || "0");
@@ -183,16 +129,6 @@ export function OrderDetailView({ orderNumber }: Props) {
                 </Badge>
               </div>
               <div className="flex items-center gap-2">
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "capitalize [&>svg]:size-4",
-                    statusColorMap[order.status as keyof typeof statusColorMap]
-                  )}
-                >
-                  <StatusIcon className="mr-1" />
-                  {order.status}
-                </Badge>
                 <span className="text-sm text-muted-foreground">
                   Created {format(new Date(order.orderDate), "MMM d, yyyy 'at' h:mm a")}
                 </span>
@@ -312,53 +248,10 @@ export function OrderDetailView({ orderNumber }: Props) {
                   {format(new Date(order.orderDate), "MMM d, yyyy 'at' h:mm a")}
                 </div>
               </div>
-              {order.completedAt && (
-                <div>
-                  <div className="text-sm text-muted-foreground">Completed Date</div>
-                  <div className="text-sm">
-                    {format(new Date(order.completedAt), "MMM d, yyyy 'at' h:mm a")}
-                  </div>
-                </div>
-              )}
             </CardContent>
           </Card>
 
-          {/* Status Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {canUpdateStatus(order.status, OrderStatus.Confirmed) && (
-                <Button
-                  className="w-full"
-                  onClick={() => handleStatusUpdate(OrderStatus.Confirmed)}
-                  disabled={updateStatus.isPending}
-                >
-                  Confirm Order
-                </Button>
-              )}
-              {canUpdateStatus(order.status, OrderStatus.Completed) && (
-                <Button
-                  className="w-full"
-                  onClick={() => handleStatusUpdate(OrderStatus.Completed)}
-                  disabled={updateStatus.isPending}
-                >
-                  Mark as Completed
-                </Button>
-              )}
-              {canUpdateStatus(order.status, OrderStatus.Cancelled) && (
-                <Button
-                  variant="destructive"
-                  className="w-full"
-                  onClick={() => handleStatusUpdate(OrderStatus.Cancelled)}
-                  disabled={updateStatus.isPending}
-                >
-                  Cancel Order
-                </Button>
-              )}
-            </CardContent>
-          </Card>
+
         </div>
       </div>
     </div>

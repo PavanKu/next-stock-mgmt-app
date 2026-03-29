@@ -1,5 +1,5 @@
 "use client";
-import { BuildingIcon, PackageIcon, ShoppingCartIcon, StarIcon } from "lucide-react";
+import { BuildingIcon, PackageIcon, ShoppingCartIcon, StarIcon, TruckIcon } from "lucide-react";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -7,15 +7,15 @@ import { usePathname } from "next/navigation";
 
 import { Separator } from "@/components/ui/separator";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+    Sidebar,
+    SidebarContent,
+    SidebarFooter,
+    SidebarGroup,
+    SidebarGroupContent,
+    SidebarHeader,
+    SidebarMenu,
+    SidebarMenuButton,
+    SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { DashboardUserButton } from "./dashboard-user-button";
 
@@ -31,9 +31,14 @@ const firstSection = [
     href: "/agents",
   }, */
   {
+    icon: TruckIcon,
+    label: "Stock In",
+    href: "/stock-in",
+  },
+  {
     icon: ShoppingCartIcon,
-    label: "Orders",
-    href: "/orders",
+    label: "Stock Out",
+    href: "/stock-out",
   },
   {
     icon: BuildingIcon,

@@ -112,7 +112,6 @@ export const meeting = pgTable("meeting", {
 // Enums
 export const statusEnum = pgEnum('status', ['active', 'inactive']);
 export const orderTypeEnum = pgEnum('order_type', ['purchase', 'sale']);
-export const orderStatusEnum = pgEnum('order_status', ['pending', 'confirmed', 'completed', 'cancelled']);
 
 // Vendors table
 export const vendors = pgTable('vendors', {
@@ -173,10 +172,8 @@ export const orders = pgTable('orders', {
   vendorId: text('vendor_id')
     .notNull()
     .references(() => vendors.id, { onDelete: 'restrict' }),
-  status: orderStatusEnum('status').default('pending'),
   totalAmount: decimal('total_amount', { precision: 12, scale: 2 }),
   orderDate: timestamp('order_date').defaultNow().notNull(),
-  completedAt: timestamp('completed_at'),
   notes: text('notes'),
   createdBy: text('created_by')
     .notNull()
